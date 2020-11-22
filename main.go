@@ -3,21 +3,22 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/go-redis/redis"
 	"sync"
 	"time"
+
+	"github.com/go-redis/redis"
 )
 
 //普通连接
-// 声明一个全局的rdb变量
+//声明一个全局的rdb变量
 var rdb *redis.Client
 
-// 初始化连接
+//初始化连接
 func initClient() (err error) {
 	rdb = redis.NewClient(&redis.Options{ //已声明rdb
 		Addr:     "localhost:6379",
-		Password: "",  // no password set
-		DB:       0,   // use default DB
+		Password: "",  //no password set
+		DB:       0,   //use default DB
 		PoolSize: 100, //连接池大小，视情况而定
 	})
 
@@ -83,13 +84,13 @@ func redisExample() {
 func redisExample2() {
 	zsetKey := "language_rank"
 	languages := []redis.Z{
-		redis.Z{Score: 90.0, Member: "Golang"},
-		redis.Z{Score: 98.0, Member: "Java"},
-		redis.Z{Score: 95.0, Member: "Python"},
-		redis.Z{Score: 97.0, Member: "JavaScript"},
-		redis.Z{Score: 99.0, Member: "C/C++"},
+		{Score: 90.0, Member: "Golang"},
+		{Score: 98.0, Member: "Java"},
+		{Score: 95.0, Member: "Python"},
+		{Score: 97.0, Member: "JavaScript"},
+		{Score: 99.0, Member: "C/C++"},
 	}
-	// ZADD
+	//ZADD
 	fmt.Println("======================ZADD")
 	num, err := rdb.ZAdd(zsetKey, languages...).Result()
 	if err != nil {
@@ -98,7 +99,7 @@ func redisExample2() {
 	}
 	fmt.Printf("zadd %d succ.\n", num)
 
-	// 把Golang的分数加10
+	//把Golang的分数加10
 	fmt.Println("======================把Golang的分数加10")
 	newScore, err := rdb.ZIncrBy(zsetKey, 10.0, "Golang").Result()
 	if err != nil {
@@ -107,7 +108,7 @@ func redisExample2() {
 	}
 	fmt.Printf("Golang's score is %f now.\n", newScore)
 
-	// 取分数最高的3个
+	//取分数最高的3个
 	fmt.Println("======================取分数最高的3个")
 	ret, err := rdb.ZRevRangeWithScores(zsetKey, 0, 2).Result()
 	if err != nil {
@@ -118,7 +119,7 @@ func redisExample2() {
 		fmt.Println(z.Member, z.Score)
 	}
 
-	// 取95~100分的
+	//取95~100分的
 	fmt.Println("======================取95~100分的")
 	op := redis.ZRangeBy{
 		Min: "95",
@@ -202,7 +203,7 @@ Watch方法接收一个函数和一个或多个key作为参数。基本使用示
 */
 
 func watchDemo1() {
-	// 监视watch_count的值，并在值不变的前提下将其值+1
+	//监视watch_count的值，并在值不变的前提下将其值+1
 	key := "watch_count"
 	err := rdb.Watch(func(tx *redis.Tx) error {
 		n, err := tx.Get(key).Int()
@@ -228,18 +229,18 @@ func watchDemo2() {
 
 	increment := func(key string) error {
 		txf := func(tx *redis.Tx) error {
-			// 获得当前值或零值
+			//获得当前值或零值
 			n, err := tx.Get(key).Int()
 			if err != nil && err != redis.Nil {
 				return err
 			}
 
-			// 实际操作（乐观锁定中的本地操作）
+			//实际操作（乐观锁定中的本地操作）
 			n++
 
-			// 仅在监视的Key保持不变的情况下运行
+			//仅在监视的Key保持不变的情况下运行
 			_, err = tx.Pipelined(func(pipe redis.Pipeliner) error {
-				// pipe 处理错误情况
+				//pipe 处理错误情况
 				pipe.Set(key, n, 0)
 				return nil
 			})
@@ -251,7 +252,7 @@ func watchDemo2() {
 			if err != redis.TxFailedErr {
 				return err
 			}
-			// 乐观锁丢失
+			//乐观锁丢失
 		}
 		return errors.New("increment reached maximum number of retries")
 	}
