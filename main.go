@@ -150,7 +150,7 @@ func pipelineDemo1() {
 	*/
 }
 
-func pipelinedDemo1() {
+func pipelineDemo2() {
 	var incr *redis.IntCmd
 	_, err := rdb.Pipelined(func(pipe redis.Pipeliner) error {
 		incr = pipe.Incr("pipelined_counter")
@@ -180,7 +180,7 @@ func txPipelineDemo1() {
 }
 
 //还有一个与上文类似的TxPipelined方法，使用方法如下：
-func pipelineDemo2() {
+func txPipelineDemo2() {
 	var incr *redis.IntCmd
 	_, err := rdb.TxPipelined(func(pipe redis.Pipeliner) error {
 		incr = pipe.Incr("tx_pipelined_counter")
@@ -273,6 +273,32 @@ func watchDemo2() {
 	n, err := rdb.Get("counter3").Int()
 	fmt.Println("ended with", n, err)
 }
+
+//lua脚本保证原子性，可用于锁
+func luaDemo() {
+	// KEYS: key for record
+	// ARGV: fieldName, currentUnixTimestamp, recordTTL
+	// Update expire field of record key to current timestamp, and renew key expiration
+	deviceSN := "123"
+
+	var lockScript = redis.NewScript(`
+		local key   = KEYS[1]
+		local value = ARGV[1]
+
+		if redis.call("GET", key) == value then
+			redis.call("DEL", key)
+			return 1
+		else
+			return 0
+		end`)
+
+	ok, err := lockScript.Run(rdb, []string{"recordKey"}, deviceSN).Bool()
+	fmt.Println("======", ok, err)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
 func main() {
 	if err := initClient(); err != nil {
 		fmt.Printf("init redis client failed,err:%v\n", err)
@@ -283,5 +309,6 @@ func main() {
 
 	//redisExample()
 	//redisExample2()
-	watchDemo1()
+	//watchDemo1()
+	luaDemo()
 }
